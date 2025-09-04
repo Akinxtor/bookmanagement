@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bookstore Management</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        input, button { margin: 5px; }
+        .book { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>📚 Bookstore</h1>
+
+    <h2>Add a Book</h2>
+    <input type="text" id="name" placeholder="Book Name">
+    <input type="text" id="author" placeholder="Author">
+    <input type="text" id="publication" placeholder="Publication">
+    <button onclick="addBook()">Add</button>
+
+    <h3>📝 Last Added Book (Local Preview)</h3>
+    <div id="preview"></div>
+
+    <input type="text" id="id" placeholder="Enter ID">
+    <button onclick="showBookbyID(document.getElementById('id').value)">Get Book</button>
+    <h2>BookByID</h2>
+    <div id="bookbyid"></div>
+
+    <h2>All Books</h2>
+    <div id="books"></div>
+
+    <script>
+        const API_URL = "http://localhost:9010/book/";
+        let lastAddedBook = null;
+
+        async function fetchBooks() {
+            const res = await fetch(API_URL);
+            const books = await res.json();
+            const bookDiv = document.getElementById("books");
+            bookDiv.innerHTML = "";
+            books.forEach(book => {
+                bookDiv.innerHTML += `
+                    <div class="book">
+                        <strong>${book.name}</strong><br>
+                        Author: ${book.author}<br>
+                        Publication: ${book.publication}<br>
+                        ID: ${book.ID}<br>
+                        <button onclick="deleteBook(${book.ID})">Delete</button>
+                    </div>
+                `;
+            });
+        }
+
+        async function addBook() {
+            const name = document.getElementById("name").value;
+            const author = document.getElementById("author").value;
+            const publication = document.getElementById("publication").value;
+
+            const newBook = { name, author, publication };
+
+            // Store locally
+            lastAddedBook = newBook;
+            showPreview();
+
+            // Clear inputs
+            document.getElementById("name").value = "";
+            document.getElementById("author").value = "";
+            document.getElementById("publication").value = "";
+
+            // Send to backend
+            await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newBook)
+            });
+
+            fetchBooks();
+        }
+        
+        async function showBookbyID(id){
+            const res=await fetch(`${API_URL}${id}`, { method: "GET" })
+            if(!res.ok)
+        {
+            console.log("movie not found")
+        }else{
+            console.log("ok")
+            const book=await res.json()
+            const bookdiv=document.getElementById("bookbyid")
+            bookdiv.innerHTML=`
+                <div class="book">
+                        <strong>${book.name}</strong><br>
+                        Author: ${book.author}<br>
+                        Publication: ${book.publication}<br>
+                        <button onclick="deleteBook(${book.ID})">Delete</button>
+                        <button onclick="UpdateBook(${book.ID})">Update</button>
+
+                    </div>
+            `
+                }
+        }
+        async function UpdateBook(id) {
+    const name = prompt("Enter new book name:");
+    const author = prompt("Enter new author:");
+    const publication = prompt("Enter new publication:");
+
+    if (!name || !author || !publication) {
+        alert("All fields are required to update the book.");
+        return;
+    }
+
+    const updatedBook = { name, author, publication };
+
+    const res = await fetch(`${API_URL}${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedBook)
+    });
+
+    if (!res.ok) {
+        console.log("❌ Book not updated");
+    } else {
+        console.log("✅ Book updated");
+        fetchBooks(); // refresh list
+        showBookbyID(id); // refresh that book view
+    }
+}
+        function showPreview() {
+            const previewDiv = document.getElementById("preview");
+            if (lastAddedBook) {
+                previewDiv.innerHTML = `
+                    <div class="book">
+                        <strong>${lastAddedBook.name}</strong><br>
+                        Author: ${lastAddedBook.author}<br>
+                        Publication: ${lastAddedBook.publication}
+                    </div>
+                `;
+            } else {
+                previewDiv.innerHTML = "";
+            }
+        }
+
+        async function deleteBook(id) {
+            await fetch(`${API_URL}${id}`, { method: "DELETE" });
+            fetchBooks();
+        }
+
+        fetchBooks();
+    </script>
+</body>
+</html>
